@@ -3,6 +3,7 @@ mod types;
 mod utils;
 
 use cidr_utils::cidr::IpCidr;
+use config::{Peer, CharPeerSection};
 use futures::{SinkExt, StreamExt};
 use packet::{builder::Builder, icmp, ip, Packet};
 use pdu::{Ethernet, EthernetPdu, Ip};
@@ -47,6 +48,10 @@ async fn run() -> anyhow::Result<()> {
 
     let all_peers = Arc::new(config.get_all_peers());
 
+    for peer in all_peers.iter() {
+        tokio::task::spawn(connect_to_peer(peer.clone()));
+    }
+
     while let Some(pkt) = framed.next().await {
         let pkt = pkt?;
         match ip::Packet::new(pkt.get_bytes()) {
@@ -67,5 +72,17 @@ async fn run() -> anyhow::Result<()> {
         }
     }
 
+    Ok(())
+}
+
+
+async fn connect_to_peer(peer: Peer) -> anyhow::Result<()> {
+    info!("Connecting to {}...", peer.path());
+    match peer {
+        Peer::Char(c) => connect_serial(c).await,
+    }
+}
+
+async fn connect_serial(peer: CharPeerSection) -> anyhow::Result<()> {
     Ok(())
 }
