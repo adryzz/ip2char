@@ -9,5 +9,5 @@ pub fn check_peer_allowed_ip(ip: &Ipv4Addr, peer: &Peer) -> bool {
         }
     }
 
-    return allowed;
+    allowed
 }

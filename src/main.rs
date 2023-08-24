@@ -2,14 +2,14 @@ mod config;
 mod types;
 mod utils;
 
-use cidr_utils::cidr::IpCidr;
+
 use config::{Peer, CharPeerSection};
 use futures::{SinkExt, StreamExt};
-use packet::{builder::Builder, icmp, ip, Packet};
-use pdu::{Ethernet, EthernetPdu, Ip};
+use packet::{builder::Builder, ip};
+
 use tokio::select;
-use tun::{TunPacket, AsyncDevice, TunPacketCodec};
-use std::{io::Read, sync::{Arc, Mutex}};
+use tun::{TunPacket};
+use std::{sync::{Arc}};
 use tracing::{error, info};
 use types::Header;
 
@@ -71,7 +71,7 @@ async fn run() -> anyhow::Result<()> {
 async fn handle_packet_from_kernel(pkt: TunPacket) {
     info!("handling packet from kernel");
     match ip::Packet::new(pkt.get_bytes()) {
-        Ok(ip::Packet::V4(pkt)) => {
+        Ok(ip::Packet::V4(_pkt)) => {
             // for peer in all_peers.iter() {
             //     if utils::check_peer_allowed_ip(&pkt.destination(), peer) {
             //         //tracing::info!("V4 packet to {}, to be routed to {}", pkt.destination(), peer.path());
@@ -80,7 +80,7 @@ async fn handle_packet_from_kernel(pkt: TunPacket) {
             //     }
             // }
         }
-        Ok(ip::Packet::V6(pkt)) => {
+        Ok(ip::Packet::V6(_pkt)) => {
             //tracing::trace!("V6 packet, cant do anything about it for now");
         }
         Err(err) => println!("Received an invalid packet: {:?}", err),
@@ -100,6 +100,6 @@ async fn connect_to_peer(peer: Peer) -> anyhow::Result<()> {
     }
 }
 
-async fn connect_serial(peer: CharPeerSection) -> anyhow::Result<()> {
+async fn connect_serial(_peer: CharPeerSection) -> anyhow::Result<()> {
     Ok(())
 }
