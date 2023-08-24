@@ -6,7 +6,7 @@ pub struct Config {
     pub interface: InterfaceSection,
     #[serde(rename = "peer-char")]
     #[serde(default)]
-    pub peer_char: Vec<CharPeerSection>
+    pub peer_char: Vec<CharPeerSection>,
 }
 
 impl Config {
@@ -22,7 +22,7 @@ impl Config {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InterfaceSection {
-    pub address: Ipv4Cidr
+    pub address: Ipv4Cidr,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,19 +34,19 @@ pub struct CharPeerSection {
 
 #[derive(Debug, Clone)]
 pub enum Peer {
-    Char(CharPeerSection)
+    Char(CharPeerSection),
 }
 
 impl Peer {
     pub fn allowed_ips(&self) -> &[Ipv4Cidr] {
         match self {
-            Peer::Char(c) => &c.allowedips[..]
+            Peer::Char(c) => &c.allowedips[..],
         }
     }
 
     pub fn path(&self) -> &str {
         match self {
-            Peer::Char(c) => &c.path
+            Peer::Char(c) => &c.path,
         }
     }
 }

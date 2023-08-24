@@ -2,12 +2,12 @@ mod config;
 mod types;
 mod utils;
 
-use std::{io::Read, sync::Arc};
-use packet::{builder::Builder, icmp, ip, Packet};
 use cidr_utils::cidr::IpCidr;
-use pdu::{Ip, EthernetPdu, Ethernet};
 use futures::{SinkExt, StreamExt};
-use tracing::{info, error};
+use packet::{builder::Builder, icmp, ip, Packet};
+use pdu::{Ethernet, EthernetPdu, Ip};
+use std::{io::Read, sync::Arc};
+use tracing::{error, info};
 use types::Header;
 
 use crate::config::Config;
@@ -17,9 +17,9 @@ async fn main() {
     tracing_subscriber::fmt::init();
 
     match run().await {
-    Ok(_) => info!("ip2char exited successfully."),
-    Err(e) => error!("{}", e),
-}
+        Ok(_) => info!("ip2char exited successfully."),
+        Err(e) => error!("{}", e),
+    }
 }
 
 async fn run() -> anyhow::Result<()> {
@@ -47,27 +47,24 @@ async fn run() -> anyhow::Result<()> {
 
     let all_peers = Arc::new(config.get_all_peers());
 
-    while let Some(packet) = framed.next().await {
-        match packet {
-            Ok(pkt) => match ip::Packet::new(pkt.get_bytes()) {
-                Ok(ip::Packet::V4(pkt)) => {
-                    for peer in all_peers.iter() {
-
-                        if utils::check_peer_allowed_ip(&pkt.destination(), peer) {
-                            //tracing::info!("V4 packet to {}, to be routed to {}", pkt.destination(), peer.path());
-                        } else {
-                            //tracing::trace!("V4 packet to {}, NOT routed to {}", pkt.destination(), peer.path());
-                        }
+    while let Some(pkt) = framed.next().await? {
+        match ip::Packet::new(pkt.get_bytes()) {
+            Ok(ip::Packet::V4(pkt)) => {
+                for peer in all_peers.iter() {
+                    if utils::check_peer_allowed_ip(&pkt.destination(), peer) {
+                        //tracing::info!("V4 packet to {}, to be routed to {}", pkt.destination(), peer.path());
+                    } else {
+                        //tracing::trace!("V4 packet to {}, NOT routed to {}", pkt.destination(), peer.path());
                     }
-                },
-                Ok(ip::Packet::V6(pkt)) => {
-                    //tracing::trace!("V6 packet, cant do anything about it for now");
                 }
-                Err(err) => println!("Received an invalid packet: {:?}", err),
-                _ => {}
-            },
-            Err(err) => panic!("Error: {:?}", err),
+            }
+            Ok(ip::Packet::V6(pkt)) => {
+                //tracing::trace!("V6 packet, cant do anything about it for now");
+            }
+            Err(err) => println!("Received an invalid packet: {:?}", err),
+            _ => {}
         }
     }
+
     Ok(())
 }
