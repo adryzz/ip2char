@@ -23,13 +23,14 @@ impl Config {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InterfaceSection {
     pub address: Ipv4Cidr,
+    pub name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CharPeerSection {
     pub path: String,
     pub allowedips: Vec<Ipv4Cidr>,
-    pub baud: Option<u32>,
+    pub speed: Option<u32>,
 }
 
 #[derive(Debug, Clone)]

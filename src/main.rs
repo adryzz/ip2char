@@ -23,7 +23,7 @@ async fn main() {
 }
 
 async fn run() -> anyhow::Result<()> {
-    let config_text = tokio::fs::read_to_string("ip2char0.toml").await?;
+    let config_text = tokio::fs::read_to_string("ip2char.toml").await?;
     let config = toml::from_str::<Config>(&config_text)?;
     info!("[0] Read config file.");
 
@@ -31,7 +31,7 @@ async fn run() -> anyhow::Result<()> {
     tun_config
         .address(config.interface.address.first_as_ipv4_addr())
         .netmask(config.interface.address.get_mask_as_ipv4_addr())
-        .name("ip2char0")
+        .name(&config.interface.name)
         .layer(tun::Layer::L3)
         .mtu(1492 - std::mem::size_of::<Header>() as i32)
         .up();
@@ -47,7 +47,8 @@ async fn run() -> anyhow::Result<()> {
 
     let all_peers = Arc::new(config.get_all_peers());
 
-    while let Some(pkt) = framed.next().await? {
+    while let Some(pkt) = framed.next().await {
+        let pkt = pkt?;
         match ip::Packet::new(pkt.get_bytes()) {
             Ok(ip::Packet::V4(pkt)) => {
                 for peer in all_peers.iter() {

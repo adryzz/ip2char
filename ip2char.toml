@@ -1,5 +1,6 @@
 [interface]
 address = "10.1.0.1/24"
+name = "ip2char0"
 
 [[peer-char]]
 path = "/dev/ttyACM0"
