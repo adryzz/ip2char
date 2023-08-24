@@ -1,0 +1,10 @@
+[interface]
+address = "10.1.0.1/24"
+
+[[peer-char]]
+path = "/dev/ttyACM0"
+allowedips = ["10.1.0.2/24"]
+
+[[peer-char]]
+path = "/dev/ttyACM1"
+allowedips = ["10.1.0.3/24"]

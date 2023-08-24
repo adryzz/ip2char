@@ -1,0 +1,20 @@
+[package]
+name = "ip2char"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.75"
+cidr-utils = { version = "0.5.10", features = ["serde"] }
+futures = "0.3.28"
+packet = "0.1.4"
+pdu = "1.4.2"
+serde = { version = "1.0.186", features = ["derive"] }
+serde_repr = "0.1.16"
+tokio = { version = "1.32.0", features = ["full"] }
+toml = "0.7.6"
+tracing = "0.1.37"
+tracing-subscriber = "0.3.17"
+tun = { version = "0.5.5", features = ["tokio", "bytes", "async"] }
