@@ -155,11 +155,11 @@ async fn connect_sock_listen(
             buf_pos += HEADER_SIZE-1;
             bytes_read -= HEADER_SIZE;
             continue;
-        } else if let Some(header) = header {
-            if bytes_read as u16 >= header.packet_length {
-                let bytes = &buf[buf_pos..(buf_pos+header.packet_length as usize)];
+        } else if let Some(hdr) = header {
+            if bytes_read as u16 >= hdr.packet_length {
+                let bytes = &buf[buf_pos..(buf_pos+hdr.packet_length as usize)];
                 mspc_tx.send(Bytes::copy_from_slice(bytes)).await?;
-                bytes_read -= header.packet_length as usize;
+                bytes_read -= hdr.packet_length as usize;
                 header = None;
                 continue;
             }
