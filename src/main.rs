@@ -13,7 +13,7 @@ use packet::{
 use std::sync::Arc;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, Interest},
-    net::tcp::{ReadHalf, WriteHalf},
+    net::tcp::{OwnedReadHalf, OwnedWriteHalf, ReadHalf, WriteHalf},
     select,
     sync::{broadcast, mpsc},
 };
@@ -134,10 +134,10 @@ async fn connect_sock(
     mut broadcast_rx: broadcast::Receiver<Packet<Bytes>>,
     mut mpsc_tx: mpsc::Sender<Bytes>,
 ) -> anyhow::Result<()> {
-    let stream = tokio::net::TcpStream::connect(&peer.path).await?;
+    let mut stream = tokio::net::TcpStream::connect(&peer.path).await?;
     info!("Connected to {}.", &peer.path);
 
-    let (read, write) = stream.split();
+    let (read, write) = stream.into_split();
     let read_task = tokio::task::spawn(read_from_tcpstream(read, mpsc_tx));
     write_to_tcpstream(write, broadcast_rx, peer.allowedips.as_ref()).await?;
 
@@ -153,7 +153,7 @@ async fn connect_sock_listen(
     let (mut stream, _) = listener.accept().await?;
     info!("Connected to {}.", &peer.path);
 
-    let (read, write) = stream.split();
+    let (read, write) = stream.into_split();
     let read_task = tokio::task::spawn(read_from_tcpstream(read, mpsc_tx));
     write_to_tcpstream(write, broadcast_rx, peer.allowedips.as_ref()).await?;
 
@@ -161,7 +161,7 @@ async fn connect_sock_listen(
 }
 
 async fn read_from_tcpstream(
-    mut stream: ReadHalf<'_>,
+    mut stream: OwnedReadHalf,
     mpsc_tx: mpsc::Sender<Bytes>,
 ) -> anyhow::Result<()> {
     let mut buf = [0u8; 1500];
@@ -185,7 +185,7 @@ async fn read_from_tcpstream(
 }
 
 async fn write_to_tcpstream(
-    mut stream: WriteHalf<'_>,
+    mut stream: OwnedWriteHalf,
     mut broadcast_rx: broadcast::Receiver<Packet<Bytes>>,
     allowed_ips: &[Ipv4Cidr],
 ) -> anyhow::Result<()> {
