@@ -18,12 +18,10 @@ pub struct Header {
 
 impl Header {
     pub fn from_slice(slice: &[u8]) -> anyhow::Result<Self> {
-        let (v, xs) = slice.split_at(2);
-        let version = *from_bytes::<u16>(v);
-        let (pl, xs) = xs.split_at(2);
-        let packet_length = *from_bytes::<u16>(pl);
-        let compression = xs[0].try_into()?;
-        let encryption = xs[1].try_into()?;
+        let version = *from_bytes::<u16>(&slice[..2]);
+        let packet_length = *from_bytes::<u16>(&slice[2..4]);
+        let compression = slice[4].try_into()?;
+        let encryption = slice[5].try_into()?;
         Ok(Self {
             version,
             packet_length,
