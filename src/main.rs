@@ -193,6 +193,11 @@ async fn write_to_tcpstream(
         let packet = broadcast_rx.recv().await?;
         // check if packet is for us
         if utils::check_allowed_ip(&packet.destination(), allowed_ips) {
+            // generate a header
+            let mut a = Header::default();
+            a.packet_length = packet.length();
+            let header_buf: [u8; HEADER_SIZE] = a.into();
+            stream.write_all(&header_buf).await?;
             stream.write_all(packet.as_ref()).await?;
         }
     }

@@ -1,13 +1,14 @@
-use std::io::{Cursor, Read};
-
 use bytemuck::from_bytes;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use thiserror::Error;
 
+use crate::HEADER_SIZE;
+
 const VERSION: u16 = 0;
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[repr(C)]
 pub struct Header {
     pub version: u16,
     pub packet_length: u16,
@@ -29,6 +30,18 @@ impl Header {
             encryption,
             _reserved: [0; 10],
         })
+    }
+}
+
+impl Into<[u8; HEADER_SIZE]> for Header {
+    fn into(self) -> [u8; HEADER_SIZE] {
+        let mut buf = [0u8; HEADER_SIZE];
+        buf[0..2].copy_from_slice(&self.version.to_le_bytes());
+        buf[2..4].copy_from_slice(&self.packet_length.to_le_bytes());
+        buf[4] = self.compression as u8;
+        buf[5] = self.encryption as u8;
+        buf[6..16].copy_from_slice(&self._reserved);
+        buf
     }
 }
 
