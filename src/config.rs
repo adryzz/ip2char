@@ -42,7 +42,7 @@ pub struct InterfaceSection {
     pub address: Ipv4Cidr,
     pub name: String,
     #[serde(rename = "ip-filtering")]
-    pub ip_filtering: Option<bool>
+    pub ip_filtering: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -68,7 +68,7 @@ pub struct SockListenPeerSection {
 pub enum Peer {
     Char(CharPeerSection),
     Sock(SockPeerSection),
-    SockListen(SockListenPeerSection)
+    SockListen(SockListenPeerSection),
 }
 
 impl Peer {

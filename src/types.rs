@@ -39,7 +39,7 @@ impl Default for Header {
             packet_length: 0,
             compression: Default::default(),
             encryption: Default::default(),
-            _reserved: Default::default()
+            _reserved: Default::default(),
         }
     }
 }
@@ -63,7 +63,7 @@ impl TryInto<CompressionType> for u8 {
     fn try_into(self) -> Result<CompressionType, Self::Error> {
         match self {
             0 => Ok(CompressionType::None),
-            n => Err(IntoErrors::NoSuchVariant(n))
+            n => Err(IntoErrors::NoSuchVariant(n)),
         }
     }
 }
@@ -81,7 +81,7 @@ impl TryInto<EncryptionType> for u8 {
     fn try_into(self) -> Result<EncryptionType, Self::Error> {
         match self {
             0 => Ok(EncryptionType::None),
-            n => Err(IntoErrors::NoSuchVariant(n))
+            n => Err(IntoErrors::NoSuchVariant(n)),
         }
     }
 }
