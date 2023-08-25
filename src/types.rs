@@ -5,10 +5,10 @@ const VERSION: u16 = 0;
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Header {
-    version: u16,
-    packet_length: u16,
-    compression: CompressionType,
-    encryption: EncryptionType,
+    pub version: u16,
+    pub packet_length: u16,
+    pub compression: CompressionType,
+    pub encryption: EncryptionType,
     _reserved: [u8; 10],
 }
 

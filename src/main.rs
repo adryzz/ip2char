@@ -13,6 +13,9 @@ use tracing::{error, info, warn};
 use types::Header;
 use crate::config::Config;
 
+const HEADER_SIZE: usize = std::mem::size_of::<Header>();
+const MTU: usize = 1500;
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
@@ -34,7 +37,7 @@ async fn run() -> anyhow::Result<()> {
         .netmask(config.interface.address.get_mask_as_ipv4_addr())
         .name(&config.interface.name)
         .layer(tun::Layer::L3)
-        .mtu(1492 - std::mem::size_of::<Header>() as i32)
+        .mtu(MTU as i32)
         .up();
 
     #[cfg(target_os = "linux")]
@@ -68,7 +71,6 @@ async fn run() -> anyhow::Result<()> {
             }
         };
     }
-    Ok(())
 }
 
 async fn handle_packet_from_kernel(data: Bytes, tx: &broadcast::Sender<Packet<Bytes>>) -> anyhow::Result<()> {
@@ -101,7 +103,6 @@ async fn connect_to_peer(peer: Peer, broadcast_rx: broadcast::Receiver<Packet<By
         Peer::Char(c) => connect_serial(c, broadcast_rx, mspc_tx).await,
         Peer::Sock(s) => connect_sock(s, broadcast_rx, mspc_tx).await,
         Peer::SockListen(s) => connect_sock_listen(s, broadcast_rx, mspc_tx).await,
-    
     };
 
     match res {
@@ -120,8 +121,9 @@ async fn connect_sock_listen(peer: SockListenPeerSection, mut broadcast_rx: broa
     let connection = listener.accept().await?;
     info!("Connected to {}.", &peer.path);
 
-    loop {
-    }
+    let mut buf = [0u8; 1500];
+    let mut header_buf = [0u8; HEADER_SIZE];
+
     Ok(())
 }
 

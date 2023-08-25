@@ -41,6 +41,8 @@ impl Config {
 pub struct InterfaceSection {
     pub address: Ipv4Cidr,
     pub name: String,
+    #[serde(rename = "ip-filtering")]
+    pub ip_filtering: Option<bool>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
