@@ -1,19 +1,16 @@
 mod config;
 mod types;
 mod utils;
-
 use bytes::Bytes;
-use cidr_utils::cidr::IpCidr;
-use config::{Peer, CharPeerSection};
-use futures::{SinkExt, StreamExt};
-use packet::{builder::Builder, icmp, ip, Packet};
-use pdu::{Ethernet, EthernetPdu, Ip};
-use tokio::sync::{mpsc, broadcast};
+use config::{Peer, CharPeerSection, SockPeerSection, SockListenPeerSection};
+use futures::{StreamExt, SinkExt};
+use packet::{ip::{self, v4::Packet}, AsPacket};
+use tokio::{sync::{mpsc, broadcast}, select};
 use tokio_serial::SerialPortBuilderExt;
-use std::{io::Read, sync::Arc};
+use tun::TunPacket;
+use std::{sync::Arc};
 use tracing::{error, info, warn};
 use types::Header;
-
 use crate::config::Config;
 
 #[tokio::main]
@@ -55,42 +52,56 @@ async fn run() -> anyhow::Result<()> {
         warn!("Zero peers listed in configuration file!");
     }
 
-    let (mspc_tx, mspc_rx) = mpsc::channel(64);
+    let (mspc_tx, mut mspc_rx) = mpsc::channel(64);
     let (broadcast_tx, broadcast_rx) = broadcast::channel(64);
 
     for peer in all_peers.iter() {
         tokio::task::spawn(connect_to_peer(peer.clone(), broadcast_rx.resubscribe(), mspc_tx.clone()));
     }
+    
+    loop {
+        select! {
+            Some(pkt) = framed.next() => handle_packet_from_kernel(pkt?.into_bytes(), &broadcast_tx).await?,
+            Some(data) = mspc_rx.recv() => {
+                let packet = prep_packet_for_kernel(data).await?;
+                framed.send(packet).await?;
+            }
+        };
+    }
+    Ok(())
+}
 
-    while let Some(pkt) = framed.next().await {
-        let pkt = pkt?;
-        match ip::Packet::new(pkt.get_bytes()) {
-            Ok(ip::Packet::V4(pkt)) => {
-                for peer in all_peers.iter() {
-                    if utils::check_peer_allowed_ip(&pkt.destination(), peer) {
-                        //tracing::info!("V4 packet to {}, to be routed to {}", pkt.destination(), peer.path());
-                    } else {
-                        //tracing::trace!("V4 packet to {}, NOT routed to {}", pkt.destination(), peer.path());
-                    }
-                }
-            }
-            Ok(ip::Packet::V6(pkt)) => {
-                //tracing::trace!("V6 packet, cant do anything about it for now");
-            }
-            Err(err) => println!("Received an invalid packet: {:?}", err),
-            _ => {}
+async fn handle_packet_from_kernel(data: Bytes, tx: &broadcast::Sender<Packet<Bytes>>) -> anyhow::Result<()> {
+    match ip::Packet::new(data) {
+        Ok(ip::Packet::V4(pkt)) => {
+            tx.send(pkt)?;
         }
+        Ok(ip::Packet::V6(pkt)) => {
+            //tracing::trace!("V6 packet, cant do anything about it for now");
+        }
+        Err(err) => println!("Received an invalid packet: {:?}", err),
+        _ => {}
     }
 
     Ok(())
 }
 
+async fn prep_packet_for_kernel(packet: Bytes) -> anyhow::Result<TunPacket> {
+    info!("prepping packet");
 
-async fn connect_to_peer(peer: Peer, broadcast_rx: broadcast::Receiver<Bytes>, mspc_tx: mpsc::Sender<Bytes>) {
+    // ugh very bad for performance
+    Ok(TunPacket::new(packet.to_vec()))
+}
+
+
+async fn connect_to_peer(peer: Peer, broadcast_rx: broadcast::Receiver<Packet<Bytes>>, mspc_tx: mpsc::Sender<Bytes>) {
     info!("Connecting to {}...", peer.path());
     let path = peer.path().to_string();
     let res = match peer {
         Peer::Char(c) => connect_serial(c, broadcast_rx, mspc_tx).await,
+        Peer::Sock(s) => connect_sock(s, broadcast_rx, mspc_tx).await,
+        Peer::SockListen(s) => connect_sock_listen(s, broadcast_rx, mspc_tx).await,
+    
     };
 
     match res {
@@ -99,7 +110,22 @@ async fn connect_to_peer(peer: Peer, broadcast_rx: broadcast::Receiver<Bytes>, m
     }
 }
 
-async fn connect_serial(peer: CharPeerSection, mut broadcast_rx: broadcast::Receiver<Bytes>, mut mspc_tx: mpsc::Sender<Bytes>) -> anyhow::Result<()> {
+async fn connect_sock(peer: SockPeerSection, mut broadcast_rx: broadcast::Receiver<Packet<Bytes>>, mut mspc_tx: mpsc::Sender<Bytes>) -> anyhow::Result<()> {
+    info!("Connected to {}.", &peer.path);
+    Ok(())
+}
+
+async fn connect_sock_listen(peer: SockListenPeerSection, mut broadcast_rx: broadcast::Receiver<Packet<Bytes>>, mut mspc_tx: mpsc::Sender<Bytes>) -> anyhow::Result<()> {
+    let listener = tokio::net::TcpListener::bind(&peer.path).await?;
+    let connection = listener.accept().await?;
+    info!("Connected to {}.", &peer.path);
+
+    loop {
+    }
+    Ok(())
+}
+
+async fn connect_serial(peer: CharPeerSection, mut broadcast_rx: broadcast::Receiver<Packet<Bytes>>, mut mspc_tx: mpsc::Sender<Bytes>) -> anyhow::Result<()> {
     let mut port = tokio_serial::new(&peer.path, peer.speed.unwrap_or(115200)).open_native_async()?;
     info!("Connected to {}.", &peer.path);
     
