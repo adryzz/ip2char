@@ -88,15 +88,15 @@ async fn handle_packet_from_kernel(data: Bytes, tx: &broadcast::Sender<Packet<By
     Ok(())
 }
 
-async fn prep_packet_for_kernel(packet: Bytes) -> anyhow::Result<TunPacket> {
+async fn prep_packet_for_kernel(packet: Packet<Bytes>) -> anyhow::Result<TunPacket> {
     info!("prepping packet");
 
     // ugh very bad for performance
-    Ok(TunPacket::new(packet.to_vec()))
+    Ok(TunPacket::new(packet.as_ref().to_vec()))
 }
 
 
-async fn connect_to_peer(peer: Peer, broadcast_rx: broadcast::Receiver<Packet<Bytes>>, mspc_tx: mpsc::Sender<Bytes>) {
+async fn connect_to_peer(peer: Peer, broadcast_rx: broadcast::Receiver<Packet<Bytes>>, mspc_tx: mpsc::Sender<Packet<Bytes>>) {
     info!("Connecting to {}...", peer.path());
     let path = peer.path().to_string();
     let res = match peer {
@@ -111,12 +111,12 @@ async fn connect_to_peer(peer: Peer, broadcast_rx: broadcast::Receiver<Packet<By
     }
 }
 
-async fn connect_sock(peer: SockPeerSection, mut broadcast_rx: broadcast::Receiver<Packet<Bytes>>, mut mspc_tx: mpsc::Sender<Bytes>) -> anyhow::Result<()> {
+async fn connect_sock(peer: SockPeerSection, mut broadcast_rx: broadcast::Receiver<Packet<Bytes>>, mut mspc_tx: mpsc::Sender<Packet<Bytes>>) -> anyhow::Result<()> {
     info!("Connected to {}.", &peer.path);
     Ok(())
 }
 
-async fn connect_sock_listen(peer: SockListenPeerSection, mut broadcast_rx: broadcast::Receiver<Packet<Bytes>>, mut mspc_tx: mpsc::Sender<Bytes>) -> anyhow::Result<()> {
+async fn connect_sock_listen(peer: SockListenPeerSection, mut broadcast_rx: broadcast::Receiver<Packet<Bytes>>, mut mspc_tx: mpsc::Sender<Packet<Bytes>>) -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(&peer.path).await?;
     let connection = listener.accept().await?;
     info!("Connected to {}.", &peer.path);
@@ -127,7 +127,7 @@ async fn connect_sock_listen(peer: SockListenPeerSection, mut broadcast_rx: broa
     Ok(())
 }
 
-async fn connect_serial(peer: CharPeerSection, mut broadcast_rx: broadcast::Receiver<Packet<Bytes>>, mut mspc_tx: mpsc::Sender<Bytes>) -> anyhow::Result<()> {
+async fn connect_serial(peer: CharPeerSection, mut broadcast_rx: broadcast::Receiver<Packet<Bytes>>, mut mspc_tx: mpsc::Sender<Packet<Bytes>>) -> anyhow::Result<()> {
     let mut port = tokio_serial::new(&peer.path, peer.speed.unwrap_or(115200)).open_native_async()?;
     info!("Connected to {}.", &peer.path);
     
