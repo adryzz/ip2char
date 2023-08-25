@@ -1,5 +1,9 @@
+use std::io::{Cursor, Read};
+
+use bytemuck::from_bytes;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use thiserror::Error;
 
 const VERSION: u16 = 0;
 
@@ -12,11 +16,32 @@ pub struct Header {
     _reserved: [u8; 10],
 }
 
+impl Header {
+    pub fn from_slice(slice: &[u8]) -> anyhow::Result<Self> {
+        let (v, xs) = slice.split_at(2);
+        let version = *from_bytes::<u16>(v);
+        let (pl, xs) = xs.split_at(2);
+        let packet_length = *from_bytes::<u16>(pl);
+        let compression = xs[0].try_into()?;
+        let encryption = xs[1].try_into()?;
+        Ok(Self {
+            version,
+            packet_length,
+            compression,
+            encryption,
+            _reserved: [0; 10],
+        })
+    }
+}
+
 impl Default for Header {
     fn default() -> Self {
         Self {
             version: VERSION,
-            ..Default::default()
+            packet_length: 0,
+            compression: Default::default(),
+            encryption: Default::default(),
+            _reserved: Default::default()
         }
     }
 }
@@ -25,12 +50,40 @@ impl Default for Header {
 #[repr(u8)]
 pub enum CompressionType {
     #[default]
-    None,
+    None = 0,
+}
+
+#[derive(Error, Debug)]
+pub enum IntoErrors {
+    #[error("no variant exists for integer {0}")]
+    NoSuchVariant(u8),
+}
+
+impl TryInto<CompressionType> for u8 {
+    type Error = IntoErrors;
+
+    fn try_into(self) -> Result<CompressionType, Self::Error> {
+        match self {
+            0 => Ok(CompressionType::None),
+            n => Err(IntoErrors::NoSuchVariant(n))
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone, Serialize_repr, Deserialize_repr, Default)]
 #[repr(u8)]
 pub enum EncryptionType {
     #[default]
-    None,
+    None = 0,
+}
+
+impl TryInto<EncryptionType> for u8 {
+    type Error = IntoErrors;
+
+    fn try_into(self) -> Result<EncryptionType, Self::Error> {
+        match self {
+            0 => Ok(EncryptionType::None),
+            n => Err(IntoErrors::NoSuchVariant(n))
+        }
+    }
 }
