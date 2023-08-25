@@ -102,6 +102,8 @@ async fn handle_packet_from_kernel(
 
 async fn prep_packet_for_kernel(packet: Bytes) -> anyhow::Result<TunPacket> {
     info!("prepping packet");
+    let hex_string = packet[..].iter().map(|&x| format!("{:02X}", x)).collect::<Vec<String>>().join(" ");
+    info!("{}", hex_string);
 
     // ugh very bad for performance
     Ok(TunPacket::new(packet.to_vec()))
@@ -145,34 +147,20 @@ async fn connect_sock_listen(
     info!("Connected to {}.", &peer.path);
 
     let mut buf = [0u8; 1500];
-    let mut bytes_read = 0;
-    let mut buf_pos = 0;
-    let mut header = None;
+    let mut header_buf = [0u8; HEADER_SIZE];
+    let mut header: Option<Header> = None;
 
     loop {
-        if header.is_none() && bytes_read >= HEADER_SIZE {
-            header = Some(Header::from_slice(&buf[buf_pos..(buf_pos+HEADER_SIZE)])?);
-            buf_pos += HEADER_SIZE-1;
-            bytes_read -= HEADER_SIZE;
-            continue;
-        } else if let Some(hdr) = header {
-            if bytes_read as u16 >= hdr.packet_length {
-                let bytes = &buf[buf_pos..(buf_pos+hdr.packet_length as usize)];
-                mspc_tx.send(Bytes::copy_from_slice(bytes)).await?;
-                bytes_read -= hdr.packet_length as usize;
-                header = None;
-                continue;
-            }
-        }
-
         let ready = stream.ready(Interest::READABLE).await?;
         if ready.is_readable() {
-            match stream.try_read(&mut buf) {
-                Ok(n) => {
-                    buf_pos = 0;
-                    bytes_read += n;
-                },
-                Err(_) => {},
+            if let Some(h) = header {
+                let b = &mut buf[0..h.packet_length as usize];
+                stream.read_exact(b).await?;
+                header = None;
+                mspc_tx.send(Bytes::copy_from_slice(b)).await?;
+            } else {
+                stream.read_exact(&mut header_buf).await?;
+                header = Some(Header::from_slice(&header_buf)?);
             }
         }
     }
