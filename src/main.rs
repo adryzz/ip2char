@@ -102,8 +102,6 @@ async fn handle_packet_from_kernel(
 
 async fn prep_packet_for_kernel(packet: Bytes) -> anyhow::Result<TunPacket> {
     info!("prepping packet");
-    let hex_string = packet[..].iter().map(|&x| format!("{:02X}", x)).collect::<Vec<String>>().join(" ");
-    info!("{}", hex_string);
 
     // ugh very bad for performance
     Ok(TunPacket::new(packet.to_vec()))
