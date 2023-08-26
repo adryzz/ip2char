@@ -1,5 +1,3 @@
-use cidr_utils::cidr::Ipv4Cidr;
-
 use crate::config::Peer;
 use std::net::Ipv4Addr;
 
