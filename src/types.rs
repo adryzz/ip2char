@@ -32,14 +32,14 @@ impl Header {
     }
 }
 
-impl Into<[u8; HEADER_SIZE]> for Header {
-    fn into(self) -> [u8; HEADER_SIZE] {
+impl From<Header> for [u8; HEADER_SIZE] {
+    fn from(val: Header) -> [u8; HEADER_SIZE] {
         let mut buf = [0u8; HEADER_SIZE];
-        buf[0..2].copy_from_slice(&self.version.to_le_bytes());
-        buf[2..4].copy_from_slice(&self.packet_length.to_le_bytes());
-        buf[4] = self.compression as u8;
-        buf[5] = self.encryption as u8;
-        buf[6..16].copy_from_slice(&self._reserved);
+        buf[0..2].copy_from_slice(&val.version.to_le_bytes());
+        buf[2..4].copy_from_slice(&val.packet_length.to_le_bytes());
+        buf[4] = val.compression as u8;
+        buf[5] = val.encryption as u8;
+        buf[6..16].copy_from_slice(&val._reserved);
         buf
     }
 }

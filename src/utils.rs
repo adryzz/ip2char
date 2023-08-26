@@ -1,4 +1,4 @@
-use ipnetwork::{IpNetwork, Ipv4Network};
+use ipnetwork::IpNetwork;
 
 use crate::config::Peer;
 use std::net::Ipv4Addr;
@@ -14,5 +14,5 @@ pub fn check_peer_allowed_ip(ip: &Ipv4Addr, peer: &Peer) -> bool {
         }
     }
 
-    return allowed;
+    allowed
 }
