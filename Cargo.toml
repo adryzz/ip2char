@@ -9,8 +9,8 @@ edition = "2021"
 anyhow = "1.0.75"
 bytemuck = "1.13.1"
 bytes = "1.4.0"
-cidr-utils = { version = "0.5.10", features = ["serde"] }
 futures = "0.3.28"
+ipnetwork = "0.20.0"
 packet = "0.1.4"
 pdu = "1.4.2"
 serde = { version = "1.0.186", features = ["derive"] }

@@ -37,8 +37,8 @@ async fn run() -> anyhow::Result<()> {
 
     let mut tun_config = tun::Configuration::default();
     tun_config
-        .address(config.interface.address.first_as_ipv4_addr())
-        .netmask(config.interface.address.get_mask_as_ipv4_addr())
+        .address(config.interface.address.ip())
+        .netmask(config.interface.address.mask())
         .name(&config.interface.name)
         .layer(tun::Layer::L3)
         .mtu(MTU as i32)
@@ -59,8 +59,8 @@ async fn run() -> anyhow::Result<()> {
         warn!("Zero peers listed in configuration file!");
     }
 
-    let (mpsc_tx, mut mpsc_rx) = mpsc::channel(64);
-    let (broadcast_tx, broadcast_rx) = broadcast::channel(64);
+    let (mpsc_tx, mut mpsc_rx) = mpsc::channel(config.interface.buffer.unwrap_or(64));
+    let (broadcast_tx, broadcast_rx) = broadcast::channel(config.interface.buffer.unwrap_or(64));
 
     for peer in all_peers.iter() {
         tokio::task::spawn(connect_to_peer(

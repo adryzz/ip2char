@@ -1,4 +1,4 @@
-use cidr_utils::cidr::Ipv4Cidr;
+use ipnetwork::Ipv4Network;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,29 +39,30 @@ impl Config {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InterfaceSection {
-    pub address: Ipv4Cidr,
+    pub address: Ipv4Network,
     pub name: String,
     #[serde(rename = "ip-filtering")]
     pub ip_filtering: Option<bool>,
+    pub buffer: Option<usize>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CharPeerSection {
     pub path: String,
-    pub allowedips: Vec<Ipv4Cidr>,
+    pub allowedips: Vec<Ipv4Network>,
     pub speed: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SockPeerSection {
     pub path: String,
-    pub allowedips: Vec<Ipv4Cidr>,
+    pub allowedips: Vec<Ipv4Network>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SockListenPeerSection {
     pub path: String,
-    pub allowedips: Vec<Ipv4Cidr>,
+    pub allowedips: Vec<Ipv4Network>,
 }
 
 #[derive(Debug, Clone)]
@@ -72,7 +73,7 @@ pub enum Peer {
 }
 
 impl Peer {
-    pub fn allowed_ips(&self) -> &[Ipv4Cidr] {
+    pub fn allowed_ips(&self) -> &[Ipv4Network] {
         match self {
             Peer::Char(c) => &c.allowedips[..],
             Peer::Sock(c) => &c.allowedips[..],
