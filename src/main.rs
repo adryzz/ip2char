@@ -13,9 +13,9 @@ use tokio::{
     sync::{broadcast, mpsc},
 };
 use tokio_serial::SerialPortBuilderExt;
-use tracing::{error, info, warn};
+use tracing::{error, info, trace, warn};
 use tun::TunPacket;
-use types::Header;
+use types::{CompressionType, Header};
 
 const HEADER_SIZE: usize = std::mem::size_of::<Header>();
 const MTU: usize = 1500;
@@ -99,7 +99,7 @@ async fn handle_packet_from_kernel(
 }
 
 async fn prep_packet_for_kernel(packet: Bytes) -> anyhow::Result<TunPacket> {
-    info!("prepping packet");
+    trace!("Sending packet to kernel");
 
     // ugh very bad for performance
     Ok(TunPacket::new(packet.to_vec()))
@@ -184,9 +184,24 @@ where
     W: AsyncWrite + Unpin,
 {
     loop {
-        let packet = broadcast_rx.recv().await?;
+        let packet: Packet<Bytes>;
+        loop {
+            match broadcast_rx.recv().await {
+                Ok(p) => {
+                    packet = p;
+                    break;
+                }
+                Err(broadcast::error::RecvError::Lagged(n)) => {
+                    warn!("[{}] Lost {} packets!", peer.path(), n);
+                    continue;
+                }
+                Err(e) => return Err(e.into()),
+            };
+        }
+
         // check if packet is for us
         if utils::check_peer_allowed_ip(&packet.destination(), peer) {
+            trace!("Sending packet from kernel");
             // generate a header
             let mut a = Header::default();
             a.packet_length = packet.length();

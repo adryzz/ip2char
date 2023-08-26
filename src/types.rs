@@ -62,6 +62,8 @@ impl Default for Header {
 pub enum CompressionType {
     #[default]
     None = 0,
+    Zstd = 1,
+    Gzip = 2,
 }
 
 #[derive(Error, Debug)]
