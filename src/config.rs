@@ -1,4 +1,4 @@
-use cidr_utils::cidr::{IpCidr, Ipv4Cidr, Ipv6Cidr};
+use cidr_utils::cidr::Ipv4Cidr;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

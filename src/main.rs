@@ -3,20 +3,12 @@ mod types;
 mod utils;
 use crate::config::Config;
 use bytes::Bytes;
-use cidr_utils::cidr::Ipv4Cidr;
 use config::{CharPeerSection, Peer, SockListenPeerSection, SockPeerSection};
 use futures::{SinkExt, StreamExt};
-use packet::{
-    ip::{self, v4::Packet},
-    AsPacket,
-};
+use packet::ip::{self, v4::Packet};
 use std::sync::Arc;
 use tokio::{
-    io::{
-        AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufStream, Interest, ReadHalf,
-        WriteHalf,
-    },
-    net::tcp::{OwnedReadHalf, OwnedWriteHalf},
+    io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadHalf, WriteHalf},
     select,
     sync::{broadcast, mpsc},
 };
@@ -97,7 +89,7 @@ async fn handle_packet_from_kernel(
         Ok(ip::Packet::V4(pkt)) => {
             tx.send(pkt)?;
         }
-        Ok(ip::Packet::V6(pkt)) => {
+        Ok(ip::Packet::V6(_pkt)) => {
             //tracing::trace!("V6 packet, cant do anything about it for now");
         }
         Err(err) => println!("Received an invalid packet: {:?}", err),
@@ -134,76 +126,29 @@ async fn connect_to_peer(
 
 async fn connect_sock(
     peer: SockPeerSection,
-    mut broadcast_rx: broadcast::Receiver<Packet<Bytes>>,
-    mut mpsc_tx: mpsc::Sender<Bytes>,
+    broadcast_rx: broadcast::Receiver<Packet<Bytes>>,
+    mpsc_tx: mpsc::Sender<Bytes>,
 ) -> anyhow::Result<()> {
-    let mut stream = tokio::net::TcpStream::connect(&peer.path).await?;
+    let stream = tokio::net::TcpStream::connect(&peer.path).await?;
     info!("Connected to {}.", &peer.path);
 
-    let (read, write) = stream.into_split();
-    let read_task = tokio::task::spawn(read_from_tcpstream(read, mpsc_tx));
-    write_to_tcpstream(write, broadcast_rx, peer.allowedips.as_ref()).await?;
+    handle_stream(stream, broadcast_rx, mpsc_tx, Peer::Sock(peer)).await?;
 
-    read_task.await?
+    Ok(())
 }
 
 async fn connect_sock_listen(
     peer: SockListenPeerSection,
-    mut broadcast_rx: broadcast::Receiver<Packet<Bytes>>,
-    mut mpsc_tx: mpsc::Sender<Bytes>,
-) -> anyhow::Result<()> {
-    let listener = tokio::net::TcpListener::bind(&peer.path).await?;
-    let (mut stream, _) = listener.accept().await?;
-    info!("Connected to {}.", &peer.path);
-
-    let (read, write) = stream.into_split();
-    let read_task = tokio::task::spawn(read_from_tcpstream(read, mpsc_tx));
-    write_to_tcpstream(write, broadcast_rx, peer.allowedips.as_ref()).await?;
-
-    read_task.await?
-}
-
-async fn read_from_tcpstream(
-    mut stream: OwnedReadHalf,
+    broadcast_rx: broadcast::Receiver<Packet<Bytes>>,
     mpsc_tx: mpsc::Sender<Bytes>,
 ) -> anyhow::Result<()> {
-    let mut buf = [0u8; 1500];
-    let mut header_buf = [0u8; HEADER_SIZE];
-    let mut header: Option<Header> = None;
+    let listener = tokio::net::TcpListener::bind(&peer.path).await?;
+    let (stream, _) = listener.accept().await?;
+    info!("Connected to {}.", &peer.path);
 
-    loop {
-        let ready = stream.ready(Interest::READABLE).await?;
-        if ready.is_readable() {
-            if let Some(h) = header {
-                let b = &mut buf[0..h.packet_length as usize];
-                stream.read_exact(b).await?;
-                header = None;
-                mpsc_tx.send(Bytes::copy_from_slice(b)).await?;
-            } else {
-                stream.read_exact(&mut header_buf).await?;
-                header = Some(Header::from_slice(&header_buf)?);
-            }
-        }
-    }
-}
+    handle_stream(stream, broadcast_rx, mpsc_tx, Peer::SockListen(peer)).await?;
 
-async fn write_to_tcpstream(
-    mut stream: OwnedWriteHalf,
-    mut broadcast_rx: broadcast::Receiver<Packet<Bytes>>,
-    allowed_ips: &[Ipv4Cidr],
-) -> anyhow::Result<()> {
-    loop {
-        let packet = broadcast_rx.recv().await?;
-        // check if packet is for us
-        if utils::check_allowed_ip(&packet.destination(), allowed_ips) {
-            // generate a header
-            let mut a = Header::default();
-            a.packet_length = packet.length();
-            let header_buf: [u8; HEADER_SIZE] = a.into();
-            stream.write_all(&header_buf).await?;
-            stream.write_all(packet.as_ref()).await?;
-        }
-    }
+    Ok(())
 }
 
 async fn read_from_stream<R>(
@@ -273,8 +218,7 @@ async fn connect_serial(
     broadcast_rx: broadcast::Receiver<Packet<Bytes>>,
     mspc_tx: mpsc::Sender<Bytes>,
 ) -> anyhow::Result<()> {
-    let port =
-        tokio_serial::new(&peer.path, peer.speed.unwrap_or(115200)).open_native_async()?;
+    let port = tokio_serial::new(&peer.path, peer.speed.unwrap_or(115200)).open_native_async()?;
     info!("Connected to {}.", &peer.path);
 
     handle_stream(port, broadcast_rx, mspc_tx, Peer::Char(peer)).await?;
