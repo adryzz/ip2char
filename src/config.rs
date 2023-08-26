@@ -1,6 +1,8 @@
 use ipnetwork::IpNetwork;
 use serde::{Deserialize, Serialize};
 
+use crate::types::{CompressionType, EncryptionType};
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub interface: InterfaceSection,
@@ -51,18 +53,30 @@ pub struct CharPeerSection {
     pub path: String,
     pub allowedips: Vec<IpNetwork>,
     pub speed: Option<u32>,
+    #[serde(default)]
+    pub compression: Option<CompressionType>,
+    #[serde(default)]
+    pub encryption: Option<EncryptionType>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SockPeerSection {
     pub path: String,
     pub allowedips: Vec<IpNetwork>,
+    #[serde(default)]
+    pub compression: Option<CompressionType>,
+    #[serde(default)]
+    pub encryption: Option<EncryptionType>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SockListenPeerSection {
     pub path: String,
     pub allowedips: Vec<IpNetwork>,
+    #[serde(default)]
+    pub compression: Option<CompressionType>,
+    #[serde(default)]
+    pub encryption: Option<EncryptionType>,
 }
 
 #[derive(Debug, Clone)]

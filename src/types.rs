@@ -58,6 +58,7 @@ impl Default for Header {
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Default)]
 #[repr(u8)]
+#[serde(rename_all = "lowercase")]
 pub enum CompressionType {
     #[default]
     None = 0,
@@ -82,6 +83,7 @@ impl TryInto<CompressionType> for u8 {
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Default)]
 #[repr(u8)]
+#[serde(rename_all = "lowercase")]
 pub enum EncryptionType {
     #[default]
     None = 0,
