@@ -43,7 +43,7 @@ pub struct InterfaceSection {
     pub name: String,
     #[serde(rename = "ip-filtering")]
     pub ip_filtering: Option<bool>,
-    pub buffer: Option<usize>
+    pub buffer: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

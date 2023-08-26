@@ -1,6 +1,5 @@
 use bytemuck::from_bytes;
 use serde::{Deserialize, Serialize};
-use serde_repr::{Deserialize_repr, Serialize_repr};
 use thiserror::Error;
 
 use crate::HEADER_SIZE;
@@ -57,7 +56,7 @@ impl Default for Header {
     }
 }
 
-#[derive(Debug, Copy, Clone, Serialize_repr, Deserialize_repr, Default)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Default)]
 #[repr(u8)]
 pub enum CompressionType {
     #[default]
@@ -81,7 +80,7 @@ impl TryInto<CompressionType> for u8 {
     }
 }
 
-#[derive(Debug, Copy, Clone, Serialize_repr, Deserialize_repr, Default)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Default)]
 #[repr(u8)]
 pub enum EncryptionType {
     #[default]

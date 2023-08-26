@@ -12,9 +12,7 @@ bytes = "1.4.0"
 futures = "0.3.28"
 ipnetwork = "0.20.0"
 packet = "0.1.4"
-pdu = "1.4.2"
 serde = { version = "1.0.186", features = ["derive"] }
-serde_repr = "0.1.16"
 thiserror = "1.0.47"
 tokio = { version = "1.32.0", features = ["full"] }
 tokio-serial = { version = "5.4.4", features = ["bytes"] }

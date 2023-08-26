@@ -261,9 +261,7 @@ dependencies = [
  "futures",
  "ipnetwork",
  "packet",
- "pdu",
  "serde",
- "serde_repr",
  "thiserror",
  "tokio",
  "tokio-serial",
@@ -468,12 +466,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pdu"
-version = "1.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3957aaf5fb779dbb9d95ccfd447b45cbdc7e49381f0f8f757614d30a7c32f4ce"
-
-[[package]]
 name = "phf"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -585,17 +577,6 @@ name = "serde_derive"
 version = "1.0.186"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5ad697f7e0b65af4983a4ce8f56ed5b357e8d3c36651bf6a7e13639c17b8e670"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "serde_repr"
-version = "0.1.16"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8725e1dfadb3a50f7e5ce0b1a540466f6ed3fe7a0fca2ac2b8b831d31316bd00"
 dependencies = [
  "proc-macro2",
  "quote",
