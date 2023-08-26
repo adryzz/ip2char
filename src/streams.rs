@@ -2,7 +2,7 @@ use bytes::Bytes;
 use packet::ip::v4::Packet;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadHalf, WriteHalf};
 use tokio::sync::{broadcast, mpsc};
-use tracing::{warn, trace};
+use tracing::{trace, warn};
 
 use crate::config::Peer;
 use crate::types::Header;

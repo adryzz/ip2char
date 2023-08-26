@@ -1,10 +1,10 @@
 mod config;
+mod packet_handling;
 mod streams;
 mod transport;
 mod tun_device;
 mod types;
 mod utils;
-mod packet_handling;
 
 use crate::config::parse_config;
 use crate::packet_handling::{handle_packet_from_kernel, prep_packet_for_kernel};

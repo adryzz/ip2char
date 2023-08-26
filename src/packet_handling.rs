@@ -1,9 +1,9 @@
 use bytes::Bytes;
-use packet::ip::{v4::Packet, self};
+use packet::ip::v4::Packet;
+use packet::ip::{self};
 use tokio::sync::broadcast;
 use tracing::trace;
 use tun::TunPacket;
-
 
 pub fn handle_packet_from_kernel(
     data: Bytes,
