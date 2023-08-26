@@ -1,5 +1,6 @@
 use ipnetwork::IpNetwork;
 use serde::{Deserialize, Serialize};
+use tracing::{info, warn};
 
 use crate::types::{CompressionType, EncryptionType};
 
@@ -102,4 +103,18 @@ impl Peer {
             Peer::SockListen(c) => &c.path,
         }
     }
+}
+
+pub async fn parse_config() -> anyhow::Result<(Config, Vec<Peer>)> {
+    let config_text = tokio::fs::read_to_string("ip2char.toml").await?;
+    let config = toml::from_str::<Config>(&config_text)?;
+    info!("[0] Read config file.");
+
+    let all_peers = config.get_all_peers();
+
+    if all_peers.is_empty() {
+        warn!("Zero peers listed in configuration file!");
+    }
+
+    Ok((config, all_peers))
 }
