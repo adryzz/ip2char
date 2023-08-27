@@ -47,6 +47,10 @@ pub struct InterfaceSection {
     #[serde(rename = "ip-filtering")]
     pub ip_filtering: Option<bool>,
     pub buffer: Option<usize>,
+    #[serde(rename = "post-up")]
+    pub post_up: Option<String>,
+    #[serde(rename = "post-down")]
+    pub post_down: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -101,6 +105,14 @@ impl Peer {
             Peer::Char(c) => &c.path,
             Peer::Sock(c) => &c.path,
             Peer::SockListen(c) => &c.path,
+        }
+    }
+
+    pub fn compression(&self) -> CompressionType {
+        match self {
+            Peer::Char(c) => c.compression.unwrap_or(CompressionType::None),
+            Peer::Sock(c) => c.compression.unwrap_or(CompressionType::None),
+            Peer::SockListen(c) => c.compression.unwrap_or(CompressionType::None),
         }
     }
 }

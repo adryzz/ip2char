@@ -1,8 +1,9 @@
 use bytemuck::from_bytes;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use tracing::{error, info};
 
-use crate::HEADER_SIZE;
+use crate::{utils, HEADER_SIZE};
 
 const VERSION: u16 = 0;
 
@@ -98,6 +99,33 @@ impl TryInto<EncryptionType> for u8 {
         match self {
             0 => Ok(EncryptionType::None),
             n => Err(IntoErrors::NoSuchVariant(n)),
+        }
+    }
+}
+
+pub struct PostCommand {
+    post_down: Option<String>,
+}
+
+impl PostCommand {
+    pub fn new(post_up: Option<String>, post_down: Option<String>) -> Self {
+        if let Some(up) = &post_up {
+            match utils::run_command(up) {
+                Ok(_) => info!("post-up: {}", up),
+                Err(e) => error!("post-up: {}", e),
+            }
+        }
+        Self { post_down }
+    }
+}
+
+impl Drop for PostCommand {
+    fn drop(&mut self) {
+        if let Some(down) = &self.post_down {
+            match utils::run_command(down) {
+                Ok(_) => info!("post-down: {}", down),
+                Err(e) => error!("post-down: {}", e),
+            }
         }
     }
 }

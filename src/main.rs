@@ -14,11 +14,11 @@ use bytes::Bytes;
 use config::Peer;
 use futures::{SinkExt, StreamExt};
 use packet::ip::v4::Packet;
-use tokio::select;
 use tokio::sync::{broadcast, mpsc};
-use tracing::{error, info};
+use tokio::select;
+use tracing::{error, info, warn};
 use tun_device::create_tun;
-use types::Header;
+use types::{Header, PostCommand};
 
 const HEADER_SIZE: usize = std::mem::size_of::<Header>();
 const MTU: usize = 1500;
@@ -36,6 +36,10 @@ async fn main() {
 async fn run() -> anyhow::Result<()> {
     let (config, all_peers) = parse_config().await?;
     let mut framed = create_tun(&config)?;
+    if let Some(down) = &config.interface.post_down {
+        tokio::spawn(utils::handle_post_down_command_sigint(down.to_string()));
+    }
+    let _cmd = PostCommand::new(config.interface.post_up, config.interface.post_down);
 
     let (mpsc_tx, mut mpsc_rx) = mpsc::channel(config.interface.buffer.unwrap_or(512));
     let (broadcast_tx, broadcast_rx) = broadcast::channel(config.interface.buffer.unwrap_or(512));
@@ -50,7 +54,13 @@ async fn run() -> anyhow::Result<()> {
 
     loop {
         select! {
-            Some(pkt) = framed.next() => handle_packet_from_kernel(pkt?.into_bytes(), &broadcast_tx)?,
+            Some(pkt) = framed.next() => {
+                match pkt {
+                    Ok(p) => handle_packet_from_kernel(p.into_bytes(), &broadcast_tx)?,
+                    Err(e) => warn!("{}", e)
+                }
+
+            },
             Some(data) = mpsc_rx.recv() => {
                 if data.len() != 0 {
                     let packet = prep_packet_for_kernel(data)?;
