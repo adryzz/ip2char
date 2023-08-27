@@ -5,9 +5,9 @@ use tracing::{error, info};
 
 use crate::{utils, HEADER_SIZE};
 
-const VERSION: u16 = 0;
-const MARKER_SIZE: usize = 4;
-const SYNC_MARKER: [u8; MARKER_SIZE] = [0xac, 0xab, 0xc0, 0xde];
+pub const VERSION: u16 = 0;
+pub const MARKER_SIZE: usize = 4;
+pub const SYNC_MARKER: [u8; MARKER_SIZE] = [0xac, 0xab, 0xc0, 0xde];
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[repr(C)]
@@ -22,6 +22,9 @@ pub struct Header {
 
 impl Header {
     pub fn from_slice(slice: &[u8]) -> anyhow::Result<Self> {
+        if slice.len() < HEADER_SIZE {
+            return Err(IntoErrors::BufferTooSmall.into());
+        }
         let marker = *from_bytes::<[u8; MARKER_SIZE]>(&slice[..4]);
         if marker != SYNC_MARKER {
             return Err(IntoErrors::BadSyncMarker.into());
@@ -84,6 +87,9 @@ pub enum IntoErrors {
 
     #[error("Sync marker doesn't match")]
     BadSyncMarker,
+
+    #[error("Buffer too small!")]
+    BufferTooSmall,
 }
 
 impl TryInto<CompressionType> for u8 {
