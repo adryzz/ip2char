@@ -25,7 +25,13 @@ const MTU: usize = 1500;
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt()
+        .event_format(
+            tracing_subscriber::fmt::format()
+                .with_file(true)
+                .with_line_number(true),
+        )
+        .init();
 
     match run().await {
         Ok(_) => info!("ip2char exited successfully."),
@@ -63,8 +69,11 @@ async fn run() -> anyhow::Result<()> {
             },
             Some(data) = mpsc_rx.recv() => {
                 if data.len() != 0 {
-                    let packet = prep_packet_for_kernel(data)?;
-                    framed.send(packet).await?;
+                    match prep_packet_for_kernel(data) {
+                        Ok(packet) => framed.send(packet).await?,
+                        Err(e) => warn!("{}", e)
+                    }
+                    
                 }
             }
         };
