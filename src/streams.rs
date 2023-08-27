@@ -97,8 +97,9 @@ where
     // Buffer streams for better throughput.
     // Additionally, when recovering from a stream desync,
     // having a buffer helps reduce syscalls when seeking.
-    let buf_stream = tokio::io::BufStream::new(stream);
-    let (read, write) = tokio::io::split(buf_stream);
+    // EDIT: it's currently breaking everything so i disabled it for now
+    //let buf_stream = tokio::io::BufStream::new(stream);
+    let (read, write) = tokio::io::split(stream);
     let read_task = tokio::task::spawn(read_from_stream(read, mpsc_tx, peer.clone()));
     write_to_stream(write, broadcast_rx, peer).await?;
 
