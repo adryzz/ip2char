@@ -23,6 +23,9 @@ pub struct Header {
 impl Header {
     pub fn from_slice(slice: &[u8]) -> anyhow::Result<Self> {
         let marker = *from_bytes::<[u8; MARKER_SIZE]>(&slice[..4]);
+        if marker != SYNC_MARKER {
+            return Err(IntoErrors::BadSyncMarker.into());
+        }
         let version = *from_bytes::<u16>(&slice[4..6]);
         let packet_length = *from_bytes::<u16>(&slice[6..8]);
         let compression = slice[8].try_into()?;
