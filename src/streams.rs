@@ -11,6 +11,7 @@ use crate::{utils, HEADER_SIZE};
 async fn read_from_stream<R>(
     mut stream: ReadHalf<R>,
     mpsc_tx: mpsc::Sender<Bytes>,
+    peer: Peer
 ) -> anyhow::Result<()>
 where
     R: AsyncRead + Unpin,
@@ -18,16 +19,32 @@ where
     let mut buf = [0u8; 1500];
     let mut header_buf = [0u8; HEADER_SIZE];
     let mut header: Option<Header> = None;
+    let mut desynced = false;
 
     loop {
+        if desynced {
+            // packet is malformed, we need to resync to the next packet with marker
+        }
         if let Some(h) = header {
+            if h.packet_length > 1500 {
+                warn!("[{}] Stream desync", peer.path());
+                desynced = true;
+                continue;
+            }
             let b = &mut buf[0..h.packet_length as usize];
             stream.read_exact(b).await?;
             header = None;
             mpsc_tx.send(Bytes::copy_from_slice(b)).await?;
         } else {
             stream.read_exact(&mut header_buf).await?;
-            header = Some(Header::from_slice(&header_buf)?);
+            match Header::from_slice(&header_buf) {
+                Ok(e) => header = Some(e),
+                Err(e) => {
+                    warn!("[{}] Stream desync: {}", peer.path(), e);
+                    desynced = true;
+
+                }
+            }
         }
     }
 }
@@ -35,7 +52,7 @@ where
 async fn write_to_stream<W>(
     mut stream: WriteHalf<W>,
     mut broadcast_rx: broadcast::Receiver<Packet<Bytes>>,
-    peer: &Peer,
+    peer: Peer,
 ) -> anyhow::Result<()>
 where
     W: AsyncWrite + Unpin,
@@ -56,7 +73,7 @@ where
             };
         }
         // check if packet is for us
-        if utils::check_peer_allowed_ip(&packet.destination(), peer) {
+        if utils::check_peer_allowed_ip(&packet.destination(), &peer) {
             trace!("Sending packet from kernel");
             // generate a header
             let mut a = Header::default();
@@ -76,10 +93,14 @@ pub async fn handle_stream<S>(
 ) -> anyhow::Result<()>
 where
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
-{
-    let (read, write) = tokio::io::split(stream);
-    let read_task = tokio::task::spawn(read_from_stream(read, mpsc_tx));
-    write_to_stream(write, broadcast_rx, &peer).await?;
+{   
+    // Buffer streams for better throughput.
+    // Additionally, when recovering from a stream desync,
+    // having a buffer helps reduce syscalls when seeking.
+    let buf_stream = tokio::io::BufStream::new(stream);
+    let (read, write) = tokio::io::split(buf_stream);
+    let read_task = tokio::task::spawn(read_from_stream(read, mpsc_tx, peer.clone()));
+    write_to_stream(write, broadcast_rx, peer).await?;
 
     read_task.await?
 }
