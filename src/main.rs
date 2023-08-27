@@ -52,8 +52,10 @@ async fn run() -> anyhow::Result<()> {
         select! {
             Some(pkt) = framed.next() => handle_packet_from_kernel(pkt?.into_bytes(), &broadcast_tx)?,
             Some(data) = mpsc_rx.recv() => {
-                let packet = prep_packet_for_kernel(data)?;
-                framed.send(packet).await?;
+                if data.len() != 0 {
+                    let packet = prep_packet_for_kernel(data)?;
+                    framed.send(packet).await?;
+                }
             }
         };
     }
