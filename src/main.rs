@@ -37,8 +37,8 @@ async fn run() -> anyhow::Result<()> {
     let (config, all_peers) = parse_config().await?;
     let mut framed = create_tun(&config)?;
 
-    let (mpsc_tx, mut mpsc_rx) = mpsc::channel(config.interface.buffer.unwrap_or(64));
-    let (broadcast_tx, broadcast_rx) = broadcast::channel(config.interface.buffer.unwrap_or(64));
+    let (mpsc_tx, mut mpsc_rx) = mpsc::channel(config.interface.buffer.unwrap_or(512));
+    let (broadcast_tx, broadcast_rx) = broadcast::channel(config.interface.buffer.unwrap_or(512));
 
     for peer in all_peers.iter() {
         tokio::task::spawn(connect_to_peer(
