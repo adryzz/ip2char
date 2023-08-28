@@ -26,7 +26,7 @@ pub async fn compress_into_buf(
             encoder.flush().await?;
             encoder.shutdown().await?;
 
-            return Ok(cursor.position() as usize + 1);
+            Ok(cursor.position() as usize + 1)
         }
         CompressionType::ZstdFast => {
             let mut encoder = ZstdEncoder::with_quality(&mut cursor, Level::Fastest);
@@ -34,7 +34,7 @@ pub async fn compress_into_buf(
             encoder.flush().await?;
             encoder.shutdown().await?;
 
-            return Ok(cursor.position() as usize + 1);
+            Ok(cursor.position() as usize + 1)
         }
         CompressionType::ZstdSlow => {
             let mut encoder = ZstdEncoder::with_quality(&mut cursor, Level::Best);
@@ -42,7 +42,7 @@ pub async fn compress_into_buf(
             encoder.flush().await?;
             encoder.shutdown().await?;
 
-            return Ok(cursor.position() as usize + 1);
+            Ok(cursor.position() as usize + 1)
         }
         CompressionType::Gzip => {
             let mut encoder = GzipEncoder::with_quality(&mut cursor, Level::Default);
@@ -50,7 +50,7 @@ pub async fn compress_into_buf(
             encoder.flush().await?;
             encoder.shutdown().await?;
 
-            return Ok(cursor.position() as usize + 1);
+            Ok(cursor.position() as usize + 1)
         }
     }
 }
@@ -66,13 +66,13 @@ pub async fn decompress_into_bytes(
             let mut decoder = ZstdDecoder::new(data);
             decoder.read_to_end(&mut buf).await?;
 
-            return Ok(buf.into());
+            Ok(buf.into())
         }
         CompressionType::Gzip => {
             let mut decoder = GzipDecoder::new(data);
             decoder.read_to_end(&mut buf).await?;
 
-            return Ok(buf.into());
+            Ok(buf.into())
         }
     }
 }

@@ -69,7 +69,7 @@ async fn run() -> anyhow::Result<()> {
 
             },
             Some(data) = mpsc_rx.recv() => {
-                if data.len() != 0 {
+                if !data.is_empty() {
                     match prep_packet_for_kernel(data) {
                         Ok(packet) => framed.send(packet).await?,
                         Err(e) => warn!("{}", e)
