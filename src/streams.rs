@@ -42,7 +42,6 @@ where
                         },
                         Err(e) => {
                             warn!("[{}] Found bad marker: {}", peer.path(), e);
-                            dbg!(header_buf);
                         }
                     }
                 }
