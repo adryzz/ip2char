@@ -2,10 +2,10 @@ use bytes::Bytes;
 use packet::ip::v4::Packet;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadHalf, WriteHalf};
 use tokio::sync::{broadcast, mpsc};
-use tracing::{trace, warn};
+use tracing::{trace, warn, info};
 
 use crate::config::Peer;
-use crate::types::Header;
+use crate::types::{Header, SYNC_MARKER, MARKER_SIZE};
 use crate::{utils, HEADER_SIZE};
 
 async fn read_from_stream<R>(
@@ -24,6 +24,29 @@ where
     loop {
         if desynced {
             // packet is malformed, we need to resync to the next packet with marker
+            let mut skip: usize = 0;
+            loop {
+                header_buf.copy_within(1.., 0);
+                header_buf[header_buf.len()-1] = stream.read_u8().await?;
+                skip += 1;
+
+                if header_buf[..MARKER_SIZE] == SYNC_MARKER {
+                    // found it
+                    // read header
+                    match Header::from_slice(&header_buf) {
+                        Ok(e) => {
+                            header = Some(e);
+                            desynced = false;
+                            info!("[{}] Fixed desync, skipped {} bytes.", peer.path(), skip);
+                            break;
+                        },
+                        Err(e) => {
+                            warn!("[{}] Found bad marker: {}", peer.path(), e);
+                            dbg!(header_buf);
+                        }
+                    }
+                }
+            }
         }
         if let Some(h) = header {
             if h.packet_length > 1500 {
