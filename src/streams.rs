@@ -16,7 +16,7 @@ async fn read_from_stream<R>(
 where
     R: AsyncRead + Unpin,
 {
-    let mut buf = [0u8; 1500];
+    let mut buf = [0u8; 1600];
     let mut header_buf = [0u8; HEADER_SIZE];
     let mut header: Option<Header> = None;
     let mut desynced = false;
@@ -78,7 +78,7 @@ async fn write_to_stream<W>(
 where
     W: AsyncWrite + Unpin,
 {
-    let mut buf = [0u8; 1500];
+    let mut buf = [0u8; 1600];
 
     loop {
         let packet: Packet<Bytes>;
