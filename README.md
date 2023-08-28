@@ -13,6 +13,7 @@ IPv6 support is planned but a dependency, [`packet`](https://github.com/meh/rust
 You can disable it in the configuration file, and allow IPv6 and broadcast packets to get routed, but the transport will become slower as a result.
 
 # Features
+- [x] Error correction
 - [ ] Compression
 - [ ] Encryption
 
