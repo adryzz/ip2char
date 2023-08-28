@@ -14,7 +14,7 @@ You can disable it in the configuration file, and allow IPv6 and broadcast packe
 
 # Features
 - [x] Error correction
-- [ ] Compression
+- [x] Compression
 - [ ] Encryption
 
 # Configuration

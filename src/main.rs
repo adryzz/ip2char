@@ -1,3 +1,4 @@
+mod compression;
 mod config;
 mod packet_handling;
 mod streams;
@@ -14,8 +15,8 @@ use bytes::Bytes;
 use config::Peer;
 use futures::{SinkExt, StreamExt};
 use packet::ip::v4::Packet;
-use tokio::sync::{broadcast, mpsc};
 use tokio::select;
+use tokio::sync::{broadcast, mpsc};
 use tracing::{error, info, warn};
 use tun_device::create_tun;
 use types::{Header, PostCommand};
@@ -73,7 +74,7 @@ async fn run() -> anyhow::Result<()> {
                         Ok(packet) => framed.send(packet).await?,
                         Err(e) => warn!("{}", e)
                     }
-                    
+
                 }
             }
         };

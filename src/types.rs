@@ -77,7 +77,11 @@ pub enum CompressionType {
     #[default]
     None = 0,
     Zstd = 1,
-    Gzip = 2,
+    #[serde(rename = "zstd-fast")]
+    ZstdFast = 2,
+    #[serde(rename = "zstd-slow")]
+    ZstdSlow = 3,
+    Gzip = 4,
 }
 
 #[derive(Error, Debug)]
@@ -98,6 +102,10 @@ impl TryInto<CompressionType> for u8 {
     fn try_into(self) -> Result<CompressionType, Self::Error> {
         match self {
             0 => Ok(CompressionType::None),
+            1 => Ok(CompressionType::Zstd),
+            2 => Ok(CompressionType::ZstdFast),
+            3 => Ok(CompressionType::ZstdSlow),
+            4 => Ok(CompressionType::Gzip),
             n => Err(IntoErrors::NoSuchVariant(n)),
         }
     }

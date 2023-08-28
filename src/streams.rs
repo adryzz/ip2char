@@ -2,16 +2,16 @@ use bytes::Bytes;
 use packet::ip::v4::Packet;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadHalf, WriteHalf};
 use tokio::sync::{broadcast, mpsc};
-use tracing::{trace, warn, info};
+use tracing::{info, trace, warn};
 
 use crate::config::Peer;
-use crate::types::{Header, SYNC_MARKER, MARKER_SIZE};
-use crate::{utils, HEADER_SIZE};
+use crate::types::{Header, MARKER_SIZE, SYNC_MARKER};
+use crate::{compression, utils, HEADER_SIZE};
 
 async fn read_from_stream<R>(
     mut stream: ReadHalf<R>,
     mpsc_tx: mpsc::Sender<Bytes>,
-    peer: Peer
+    peer: Peer,
 ) -> anyhow::Result<()>
 where
     R: AsyncRead + Unpin,
@@ -27,7 +27,7 @@ where
             let mut skip: usize = 0;
             loop {
                 header_buf.copy_within(1.., 0);
-                header_buf[header_buf.len()-1] = stream.read_u8().await?;
+                header_buf[header_buf.len() - 1] = stream.read_u8().await?;
                 skip += 1;
 
                 if header_buf[..MARKER_SIZE] == SYNC_MARKER {
@@ -39,7 +39,7 @@ where
                             desynced = false;
                             info!("[{}] Fixed desync, skipped {} bytes.", peer.path(), skip);
                             break;
-                        },
+                        }
                         Err(e) => {
                             warn!("[{}] Found bad marker: {}", peer.path(), e);
                         }
@@ -56,7 +56,7 @@ where
             let b = &mut buf[0..h.packet_length as usize];
             stream.read_exact(b).await?;
             header = None;
-            mpsc_tx.send(Bytes::copy_from_slice(b)).await?;
+            mpsc_tx.send(compression::decompress_into_bytes(b, h.compression).await?).await?;
         } else {
             stream.read_exact(&mut header_buf).await?;
             match Header::from_slice(&header_buf) {
@@ -64,7 +64,6 @@ where
                 Err(e) => {
                     warn!("[{}] Stream desync: {}", peer.path(), e);
                     desynced = true;
-
                 }
             }
         }
@@ -79,6 +78,8 @@ async fn write_to_stream<W>(
 where
     W: AsyncWrite + Unpin,
 {
+    let mut buf = [0u8; 1500];
+
     loop {
         let packet: Packet<Bytes>;
         loop {
@@ -99,10 +100,16 @@ where
             trace!("Sending packet from kernel");
             // generate a header
             let mut a = Header::default();
-            a.packet_length = packet.length();
+
+            let compressed_size =
+                compression::compress_into_buf(packet.as_ref(), &mut buf, peer.compression())
+                    .await?;
+
+            a.packet_length = compressed_size as u16;
+            a.compression = peer.compression();
             let header_buf: [u8; HEADER_SIZE] = a.into();
             stream.write_all(&header_buf).await?;
-            stream.write_all(packet.as_ref()).await?;
+            stream.write_all(&buf[..compressed_size]).await?;
         }
     }
 }
@@ -115,7 +122,7 @@ pub async fn handle_stream<S>(
 ) -> anyhow::Result<()>
 where
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
-{   
+{
     // Buffer streams for better throughput.
     // Additionally, when recovering from a stream desync,
     // having a buffer helps reduce syscalls when seeking.
